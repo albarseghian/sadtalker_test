@@ -48,11 +48,12 @@ def main():
 
     # 2. Install dependencies
     print("Installing SadTalker dependencies...")
-    pip_path = os.path.join(os.path.dirname(sys.executable), "pip.exe")
-    if not os.path.exists(pip_path):
-        pip_path = "pip"
+    # Detect if we are on Windows or Linux
+    is_windows = os.name == 'nt'
+    pip_cmd = [sys.executable, "-m", "pip", "install"]
     
-    run_command([pip_path, "install", "torchaudio", "face-alignment", "imageio", "scikit-image", "resampy", "kornia", "facexlib", "yacs", "gfpgan", "safetensors"], cwd=project_root)
+    deps = ["torchaudio", "face-alignment", "imageio", "scikit-image", "resampy", "kornia", "facexlib", "yacs", "gfpgan", "safetensors"]
+    run_command(pip_cmd + deps, cwd=project_root)
 
     # 3. Download weights
     checkpoint_dir = os.path.join(sadtalker_dir, "checkpoints")
@@ -72,23 +73,38 @@ def main():
     for name, url in models.items():
         download_file(url, os.path.join(checkpoint_dir, name))
 
-    # GFPGAN weights
-    download_file(
-        "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth",
-        os.path.join(gfpgan_dir, "GFPGANv1.4.pth")
-    )
+    # 4. Download face enhancer and alignment weights
+    enhancer_models = {
+        "GFPGANv1.4.pth": "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth",
+        "alignment_WFLW_4HG.pth": "https://github.com/xinntao/facexlib/releases/download/v0.1.0/alignment_WFLW_4HG.pth",
+    }
+    for name, url in enhancer_models.items():
+        download_file(url, os.path.join(gfpgan_dir, name))
 
-    # 4. Download facexlib models
-    facex_dir = os.path.join(project_root, ".venv311", "Lib", "site-packages", "facexlib", "weights")
+    # 5. Download facexlib models into the site-packages directory
+    # We find the site-packages path dynamically
+    import site
+    site_packages = site.getsitepackages()[0]
+    facex_dir = os.path.join(site_packages, "facexlib", "weights")
     os.makedirs(facex_dir, exist_ok=True)
     
     facex_models = {
-        "detection_Resnet50_Final.pth": "https://huggingface.co/sczhou/CodeFormer/resolve/main/weights/facexlib/detection_Resnet50_Final.pth",
-        "parsing_parsenet.pth": "https://huggingface.co/sczhou/CodeFormer/resolve/main/weights/facexlib/parsing_parsenet.pth",
+        "detection_Resnet50_Final.pth": "https://github.com/xinntao/facexlib/releases/download/v0.1.0/detection_Resnet50_Final.pth",
+        "parsing_parsenet.pth": "https://github.com/xinntao/facexlib/releases/download/v0.2.2/parsing_parsenet.pth",
     }
     
     for name, url in facex_models.items():
         download_file(url, os.path.join(facex_dir, name))
+
+    # 6. Download BFM Fitting models (Required for 3DMM extraction)
+    bfm_dir = os.path.join(sadtalker_dir, "src", "face3d", "BFM")
+    os.makedirs(bfm_dir, exist_ok=True)
+    bfm_files = {
+        "BFM_model_front.mat": "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/BFM_model_front.mat",
+        "exp_info.mat": "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/exp_info.mat",
+    }
+    for name, url in bfm_files.items():
+        download_file(url, os.path.join(bfm_dir, name))
 
     print("\nSetup complete! SadTalker is ready for testing.")
 
