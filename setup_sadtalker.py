@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 def run_command(command, cwd=None):
     print(f"Running: {' '.join(command)}")
-    result = subprocess.run(command, cwd=cwd, shell=True)
+    result = subprocess.run(command, cwd=cwd, shell=False)
     if result.returncode != 0:
         print(f"Error: Command failed with return code {result.returncode}")
         return False
